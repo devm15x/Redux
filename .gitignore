@@ -1,0 +1,7 @@
+# Build output
+obj/
+
+# ISO build directory
+iso_root/
+
+qemu.bat
