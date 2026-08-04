@@ -16,8 +16,10 @@ endif
 
 ifneq ($(TOOLCHAIN_PREFIX),)
     CC := $(TOOLCHAIN_PREFIX)gcc
+    OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
 else
     CC := cc
+    OBJCOPY := objcopy
 endif
 
 LD := $(TOOLCHAIN_PREFIX)ld
@@ -25,6 +27,7 @@ LD := $(TOOLCHAIN_PREFIX)ld
 ifeq ($(TOOLCHAIN),llvm)
     CC := clang
     LD := ld.lld
+    OBJCOPY := llvm-objcopy
 endif
 
 CFLAGS := -g -O2 -pipe
@@ -60,8 +63,10 @@ override CFLAGS += \
     -mno-red-zone \
     -mcmodel=kernel
 
+# Include 'src' and 'src/drivers' so your include directives work cleanly
 override CPPFLAGS := \
     -I src \
+    -I src/drivers \
     $(CPPFLAGS) \
     -MMD \
     -MP
@@ -79,20 +84,25 @@ override LDFLAGS += \
     --gc-sections \
     -T linker.lds
 
+# This dynamically scans everything inside src/ and src/drivers/ automatically
 override SRCFILES := $(shell find -L src -type f 2>/dev/null | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 override NASMFILES := $(filter %.asm,$(SRCFILES))
 override OBJ := $(addprefix obj/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o) $(NASMFILES:.asm=.asm.o))
+
+# FIX: Ensure compiler dependency generation captures your new header files accurately
 override HEADER_DEPS := $(addprefix obj/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
 
 .PHONY: all
 all: $(ISO)
 
 -include $(HEADER_DEPS)
+
+# FIX: Dynamically targets your cross-compiler toolchain via OBJCOPY variable
 $(FONT_OBJ): src/font.psf
 	mkdir -p "$(dir $@)"
-	/c/cross/bin/x86_64-elf-objcopy \
+	$(OBJCOPY) \
 		-I binary \
 		-O elf64-x86-64 \
 		-B i386:x86-64 \

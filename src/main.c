@@ -4,6 +4,8 @@
 #include <limine.h>
 #include "psf.h"
 #include "terminal.h"
+#include "drivers\ascii.h"
+#include "drivers\keyboard.h"
 //here are some attributes, now go have fun and leave me alone
 
 __attribute__((used, section(".limine_requests")))
@@ -91,5 +93,14 @@ struct limine_framebuffer *framebuffer =
         terminal_putchar('\n');
         println("Copyright (C) 2026-present devm15");
         println("Licensed under the MIT License.");
+        while (1) {
+            uint8_t scancode = keyboard_get_scancode();
+            if (scancode != 0) {
+                char c = scancode_to_ascii(scancode);
+                if (c != 0) {
+                    terminal_putchar(c);
+                }   
+            }
+        }
         halt();
 }
