@@ -5,6 +5,7 @@ uint8_t keyboard_data_available(void) {
      return (inb(0x64) & 0x01);
 }
 
+//poops out the scancode so we can give it diareah
 uint8_t keyboard_get_scancode(void) {
     if (keyboard_data_available()) {
         io_wait(); 

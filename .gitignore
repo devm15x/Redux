@@ -5,3 +5,15 @@ obj/
 iso_root/
 
 qemu.bat
+
+qemu-modernpc.bat
+
+push.py
+
+read.py
+
+disk.img
+
+HELLO.ELF
+
+

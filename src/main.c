@@ -7,7 +7,10 @@
 #include "terminal.h"
 #include "drivers/ascii.h"
 #include "drivers/keyboard.h"
+#include "drivers/ata.h"
 #include "shell.h"
+#include "drivers/ff.h"
+
 
 //here are some attributes, now go have fun and leave me alone
 __attribute__((used, section(".limine_requests_start")))
@@ -33,77 +36,6 @@ static volatile struct limine_memmap_request memmap_request = {
 __attribute__((used, section(".limine_requests_end")))
 static volatile uint64_t limine_requests_end_marker[] =
     LIMINE_REQUESTS_END_MARKER;
-
-void *memcpy(void *restrict dest, const void *restrict src, size_t n)
-{
-    uint8_t *restrict pdest = dest;
-    const uint8_t *restrict psrc = src;
-
-    for (size_t i = 0; i < n; i++)
-    {
-        pdest[i] = psrc[i];
-    }
-
-    return dest;
-}
-
-void *memset(void *s, int c, size_t n)
-{
-    uint8_t *p = s;
-
-    for (size_t i = 0; i < n; i++)
-    {
-        p[i] = (uint8_t)c;
-    }
-
-    return s;
-}
-
-void *memmove(void *dest, const void *src, size_t n)
-{
-    uint8_t *pdest = dest;
-    const uint8_t *psrc = src;
-
-    if ((uintptr_t)src > (uintptr_t)dest)
-    {
-        for (size_t i = 0; i < n; i++)
-        {
-            pdest[i] = psrc[i];
-        }
-    }
-    else if ((uintptr_t)src < (uintptr_t)dest)
-    {
-        for (size_t i = n; i > 0; i--)
-        {
-            pdest[i - 1] = psrc[i - 1];
-        }
-    }
-
-    return dest;
-}
-
-static void print_uint64(uint64_t value)
-{
-    char buffer[21];
-    size_t position = sizeof(buffer) - 1;
-
-    buffer[position] = '\0';
-
-    if (value == 0)
-    {
-        print("0");
-        return;
-    }
-
-    while (value > 0)
-    {
-        position--;
-        buffer[position] = (char)('0' + (value % 10));
-        value /= 10;
-    }
-
-    print(&buffer[position]);
-}
 
 static uint64_t get_usable_ram_kb(void)
 {
@@ -138,8 +70,12 @@ static void halt(void)
     }
 }
 
+
+static FATFS g_filesystem;
+
 void kmain(void)
 {
+
     if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))
     {
         halt();
@@ -153,7 +89,6 @@ void kmain(void)
 
     struct limine_framebuffer *framebuffer =
         framebuffer_request.response->framebuffers[0];
-
     terminal_initialize(framebuffer);
     psf_init(framebuffer);
     terminal_clear(framebuffer);
@@ -167,6 +102,21 @@ void kmain(void)
     print("Available Memory: ");
     print_uint64(get_usable_ram_kb());
     println(" KB");
+    ata_initialize();
+    println("Initializing storage...");
+
+    FRESULT result = f_mount(&g_filesystem, "0:", 1);
+
+    if (result == FR_OK)
+    {
+        println("Filesystem mounted.");
+    }
+    else
+    {
+        print("Mount failed. Error ");
+        print_uint64(result);
+        println("");
+    }
 
     shell_init(framebuffer);
 

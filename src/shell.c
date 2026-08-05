@@ -3,9 +3,11 @@
 #include "drivers/ascii.h"
 #include "terminal.h"
 #include "limine.h"
-
+#include "drivers/ff.h"
 #include <stddef.h>
 #include <stdint.h>
+#include "drivers/elf.h"
+#include "program.h"
 
 #define SHELL_BUFFER_SIZE 128
 #define SHELL_MAX_ARGS 16
@@ -75,6 +77,97 @@ static void shell_prompt(void)
     print("> ");
 }
 
+static void shell_create_test_file(void)
+{
+    FIL file;
+    UINT written;
+
+    FRESULT result = f_open(
+        &file,
+        "0:/HELLO.TXT",
+        FA_CREATE_ALWAYS | FA_WRITE
+    );
+
+    print("f_open result: ");
+    print_uint64((uint64_t)result);
+    println("");
+
+    if (result != FR_OK)
+    {
+        return;
+    }
+
+    const char *text = "Hello from Redux!\n";
+
+    result = f_write(
+        &file,
+        text,
+        18,
+        &written
+    );
+
+    print("f_write result: ");
+    print_uint64((uint64_t)result);
+    println("");
+
+    print("Bytes written: ");
+    print_uint64((uint64_t)written);
+    println("");
+
+    result = f_close(&file);
+
+    print("f_close result: ");
+    print_uint64((uint64_t)result);
+    println("");
+}
+
+static void shell_dir(const char *path)
+{
+    DIR directory;
+    FILINFO file_info;
+
+    FRESULT result = f_opendir(&directory, path);
+
+    if (result != FR_OK)
+    {
+        print("Could not open directory. FatFs error: ");
+        print_uint64((uint64_t)result);
+        println("");
+        return;
+    }
+
+    while (1)
+    {
+        result = f_readdir(&directory, &file_info);
+
+        if (result != FR_OK)
+        {
+            print("Could not read directory. FatFs error: ");
+            print_uint64((uint64_t)result);
+            println("");
+            break;
+        }
+
+        if (file_info.fname[0] == '\0')
+        {
+            break;
+        }
+
+        if (file_info.fattrib & AM_DIR)
+        {
+            print("<DIR> ");
+        }
+        else
+        {
+            print("      ");
+        }
+
+        println(file_info.fname);
+    }
+
+    f_closedir(&directory);
+}
+
 static void shell_execute(void)
 {
     char *argv[SHELL_MAX_ARGS];
@@ -98,6 +191,8 @@ static void shell_execute(void)
         println("echo <text>");
         println("clear");
         println("cls");
+        println("dir <dir>");
+        println("run <file>");
     }
     else if (strings_equal(argv[0], "ver"))
     {
@@ -122,6 +217,31 @@ static void shell_execute(void)
     {
         terminal_clear(shell_framebuffer);
     }
+    else if (strings_equal(argv[0], "touchtest")) {
+        shell_create_test_file();
+    }
+    else if (strings_equal(argv[0], "run"))
+    {
+        if (argc < 2)
+        {
+            println("Usage: run <file>");
+        }
+        else
+        {
+            program_run(argv[1]);
+        }
+    }
+    else if (strings_equal(argv[0], "dir")){
+        if (argc >= 2)
+        {   
+            shell_dir(argv[1]);
+        }
+        
+        else
+        {
+            shell_dir("0:/");
+        }
+    }
     else
     {
         print("Unknown command: ");
@@ -138,6 +258,9 @@ void shell_init(struct limine_framebuffer *framebuffer)
 
     shell_prompt();
 }
+
+
+
 
 void shell_update(void)
 {

@@ -9,5 +9,6 @@ void terminal_cursor_update(void);
 void print(const char *text);
 void println(const char *text);
 void terminal_clear(struct limine_framebuffer *framebuffer);
+void print_uint64(uint64_t value);
 
 #endif
