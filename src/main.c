@@ -10,6 +10,8 @@
 #include "drivers/ata.h"
 #include "shell.h"
 #include "drivers/ff.h"
+#include "program0.h"
+#include "idt.h"
 
 
 //here are some attributes, now go have fun and leave me alone
@@ -91,9 +93,10 @@ void kmain(void)
         framebuffer_request.response->framebuffers[0];
     terminal_initialize(framebuffer);
     psf_init(framebuffer);
-    terminal_clear(framebuffer);
+    terminal_clear(framebuffer, 0x00081A33);
+    idt_init();
 
-    println("Redux Kernel v0.0.1");
+    println("Redux Kernel v0.0.2");
     terminal_putchar('\n');
 
     println("Copyright (C) 2026-present devm15");
@@ -104,6 +107,7 @@ void kmain(void)
     println(" KB");
     ata_initialize();
     println("Initializing storage...");
+    
 
     FRESULT result = f_mount(&g_filesystem, "0:", 1);
 
@@ -117,11 +121,15 @@ void kmain(void)
         print_uint64(result);
         println("");
     }
-
+    program_initialize(framebuffer);
     shell_init(framebuffer);
-
+    
     while (1)
     {
         shell_update();
+        volatile int zero = 0;
+        volatile int result = 123 / zero;
+
+        (void)result;
     }
 }

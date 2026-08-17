@@ -8,6 +8,9 @@ override ISO_ROOT := iso_root
 TOOLCHAIN :=
 TOOLCHAIN_PREFIX := /c/cross/bin/x86_64-elf-
 
+# Local NASM installation
+NASM := /c/Users/DanielFenech/Documents/reduxkernel/src/nasm-3.02/nasm.exe
+
 ifneq ($(TOOLCHAIN),)
     ifeq ($(TOOLCHAIN_PREFIX),)
         TOOLCHAIN_PREFIX := $(TOOLCHAIN)-
@@ -63,7 +66,7 @@ override CFLAGS += \
     -mno-red-zone \
     -mcmodel=kernel
 
-# Include 'src' and 'src/drivers' so your include directives work cleanly
+# Include src and src/drivers
 override CPPFLAGS := \
     -I src \
     -I src/drivers \
@@ -84,22 +87,32 @@ override LDFLAGS += \
     --gc-sections \
     -T linker.lds
 
-# This dynamically scans everything inside src/ and src/drivers/ automatically
-override SRCFILES := $(shell find -L src -type f 2>/dev/null | LC_ALL=C sort)
+# Scan source tree, but ignore the bundled NASM directory
+override SRCFILES := $(shell find -L src \
+    -path 'src/nasm-3.02' -prune -o \
+    -type f -print 2>/dev/null | LC_ALL=C sort)
+
 override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 override NASMFILES := $(filter %.asm,$(SRCFILES))
-override OBJ := $(addprefix obj/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o) $(NASMFILES:.asm=.asm.o))
 
-# FIX: Ensure compiler dependency generation captures your new header files accurately
-override HEADER_DEPS := $(addprefix obj/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
+override OBJ := $(addprefix obj/, \
+    $(CFILES:.c=.c.o) \
+    $(ASFILES:.S=.S.o) \
+    $(NASMFILES:.asm=.asm.o) \
+)
+
+override HEADER_DEPS := $(addprefix obj/, \
+    $(CFILES:.c=.c.d) \
+    $(ASFILES:.S=.S.d) \
+)
 
 .PHONY: all
 all: $(ISO)
 
 -include $(HEADER_DEPS)
 
-# FIX: Dynamically targets your cross-compiler toolchain via OBJCOPY variable
+# Convert PSF font into an ELF object
 $(FONT_OBJ): src/font.psf
 	mkdir -p "$(dir $@)"
 	$(OBJCOPY) \
@@ -108,24 +121,30 @@ $(FONT_OBJ): src/font.psf
 		-B i386:x86-64 \
 		$< $@
 
+# Link kernel
 bin/$(OUTPUT): GNUmakefile linker.lds $(OBJ) $(FONT_OBJ)
 	mkdir -p "$(dir $@)"
 	$(LD) $(LDFLAGS) $(OBJ) $(FONT_OBJ) -o $@
 
+# Compile C
 obj/%.c.o: %.c GNUmakefile
 	mkdir -p "$(dir $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
+# Compile GAS assembly
 obj/%.S.o: %.S GNUmakefile
 	mkdir -p "$(dir $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
+# Compile NASM assembly
 obj/%.asm.o: %.asm GNUmakefile
 	mkdir -p "$(dir $@)"
-	nasm $(NASMFLAGS) $< -o $@
+	"$(NASM)" $(NASMFLAGS) $< -o $@
 
+# Build ISO
 $(ISO): bin/$(OUTPUT) limine.conf
 	rm -rf $(ISO_ROOT)
+
 	mkdir -p $(ISO_ROOT)/boot/limine
 	mkdir -p $(ISO_ROOT)/EFI/BOOT
 
@@ -156,8 +175,16 @@ $(ISO): bin/$(OUTPUT) limine.conf
 
 .PHONY: run
 run: $(ISO)
-	qemu-system-x86_64 -cdrom $(ISO) -m 512M -no-reboot -no-shutdown
+	qemu-system-x86_64 \
+		-cdrom $(ISO) \
+		-m 512M \
+		-no-reboot \
+		-no-shutdown
 
 .PHONY: clean
 clean:
-	rm -rf bin obj $(ISO_ROOT) $(ISO)
+	rm -rf \
+		bin \
+		obj \
+		$(ISO_ROOT) \
+		$(ISO)

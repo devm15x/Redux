@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "drivers/elf.h"
-#include "program.h"
+#include "program0.h"
 
 #define SHELL_BUFFER_SIZE 128
 #define SHELL_MAX_ARGS 16
@@ -215,7 +215,10 @@ static void shell_execute(void)
     else if (strings_equal(argv[0], "clear") ||
              strings_equal(argv[0], "cls"))
     {
-        terminal_clear(shell_framebuffer);
+        terminal_clear(
+    shell_framebuffer,
+    terminal_get_background()
+);
     }
     else if (strings_equal(argv[0], "touchtest")) {
         shell_create_test_file();
