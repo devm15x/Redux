@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
-
+#include <stdbool.h>
 #include "limine.h"
 #include "psf.h"
 
@@ -206,25 +206,29 @@ static void terminal_erase_cursor(void)
     cursor_visible = 0;
 }
 
+extern volatile uint64_t redux_system_ticks;
+
+static uint64_t cursor_last_tick = 0;
+
 void terminal_cursor_update(void)
 {
-    cursor_counter++;
-
-    if (cursor_counter <
-        CURSOR_BLINK_DELAY)
+    if (redux_system_ticks == cursor_last_tick)
     {
         return;
     }
 
-    cursor_counter = 0;
+    cursor_last_tick =
+        redux_system_ticks;
 
     if (cursor_visible)
     {
         terminal_erase_cursor();
+        cursor_visible = false;
     }
     else
     {
         terminal_draw_cursor();
+        cursor_visible = true;
     }
 }
 

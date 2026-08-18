@@ -1,9 +1,10 @@
 #include <stdint.h>
 #include "panic.h"
 
-#define GDT_OFFSET_KERNEL_CODE 0x28
+#define GDT_OFFSET_KERNEL_CODE 0x08
 
 extern void *isr_stub_table[32];
+extern void apic_timer_isr_stub(void);
 
 typedef struct
 {
@@ -85,6 +86,12 @@ void idt_init(void)
             0x8E
         );
     }
+
+    idt_set_descriptor(
+        0x40,
+        apic_timer_isr_stub,
+        0x8E
+    );
 
     __asm__ volatile(
         "lidt %0"

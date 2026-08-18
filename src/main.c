@@ -16,6 +16,8 @@
 #include "apic.h"
 #include "panic.h"
 #include "paging.h"
+#include "clock.h"
+#include "acpi.h"
 
 //here are some attributes, now go have fun and leave me alone
 __attribute__((used, section(".limine_requests_start")))
@@ -196,6 +198,57 @@ void kmain(void)
 
     println("Local APIC enabled.");
 
+    println("Initializing ACPI...");
+
+    if (!acpi_init(
+    rsdp,
+    hhdm_offset
+    ))
+    {
+        panic("Could not initialize ACPI PM timer.");
+    }
+    println("ACPI PM timer found.");
+println("Calibrating Local APIC timer...");
+
+uint32_t ticks_per_ms =
+    calibrate_lapic_timer();
+
+if (ticks_per_ms == 0)
+{
+    panic("LAPIC timer calibration failed.");
+}
+
+print("LAPIC ticks/ms: ");
+print_uint64(ticks_per_ms);
+println("");
+
+uint32_t cursor_ticks =
+    redux_clock_ms_to_ticks(
+        500
+    );
+
+    if (cursor_ticks == 0)
+    {
+        panic("Could not calculate cursor timer.");
+    }
+
+    print("LAPIC ticks/500ms: ");
+    print_uint64(cursor_ticks);
+    println("");
+
+    init_one_shot_clock(
+        0x40
+    );
+
+    redux_clock_set_reload(
+        cursor_ticks
+    );
+
+    arm_redux_clock(
+        cursor_ticks
+    );
+
+    __asm__ volatile("sti");
     terminal_clear(
         framebuffer,
         0x00081A33
@@ -241,6 +294,7 @@ void kmain(void)
     while (1)
     {
         shell_update();
+        terminal_cursor_update();
     }
 }
 

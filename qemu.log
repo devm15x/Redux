@@ -169,6 +169,8 @@ DR0=0000000000000000 DR1=0000000000000000 DR2=0000000000000000 DR3=0000000000000
 DR6=00000000ffff0ff0 DR7=0000000000000400
 CCS=00000004 CCD=00000001 CCO=EFLAGS
 EFER=0000000000000000
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
 SMM: enter
 EAX=000000b5 EBX=000f7d2d ECX=00001234 EDX=000069ff
 ESI=000069a2 EDI=1effee71 EBP=00006962 ESP=00006962
@@ -473,6 +475,26 @@ DR0=0000000000000000 DR1=0000000000000000 DR2=0000000000000000 DR3=0000000000000
 DR6=00000000ffff0ff0 DR7=0000000000000400
 CCS=00000004 CCD=00000001 CCO=EFLAGS
 EFER=0000000000000000
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
+Servicing hardware INT=0x08
 Servicing hardware INT=0x08
 Servicing hardware INT=0x08
 Servicing hardware INT=0x08

@@ -1,0 +1,1 @@
+All programs that run in Ring 0 all go through 1 main file. program0.c (Before 0.0.2 program.c) . This file defines the Redux API for Ring 0. Waiting to be replaced with a ring 3 version,  it is currently a placeholder.
