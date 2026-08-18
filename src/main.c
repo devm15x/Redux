@@ -12,7 +12,10 @@
 #include "drivers/ff.h"
 #include "program0.h"
 #include "idt.h"
-
+#include "gdt.h"
+#include "apic.h"
+#include "panic.h"
+#include "paging.h"
 
 //here are some attributes, now go have fun and leave me alone
 __attribute__((used, section(".limine_requests_start")))
@@ -35,9 +38,22 @@ static volatile struct limine_memmap_request memmap_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_rsdp_request rsdp_request = {
+    .id = LIMINE_RSDP_REQUEST_ID,
+    .revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST_ID,
+    .revision = 0
+};
+
 __attribute__((used, section(".limine_requests_end")))
 static volatile uint64_t limine_requests_end_marker[] =
     LIMINE_REQUESTS_END_MARKER;
+
 
 static uint64_t get_usable_ram_kb(void)
 {
@@ -72,12 +88,10 @@ static void halt(void)
     }
 }
 
-
 static FATFS g_filesystem;
 
 void kmain(void)
 {
-
     if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))
     {
         halt();
@@ -91,10 +105,103 @@ void kmain(void)
 
     struct limine_framebuffer *framebuffer =
         framebuffer_request.response->framebuffers[0];
+
     terminal_initialize(framebuffer);
     psf_init(framebuffer);
     terminal_clear(framebuffer, 0x00081A33);
+
+    println("Redux early boot.");
+    println("Terminal OK.");
+
+    __asm__ volatile("cli");
+
+    println("Loading GDT...");
+    gdt_init();
+    println("GDT OK.");
+
+    println("Loading IDT...");
     idt_init();
+    println("IDT OK.");
+
+    println("Checking APIC...");
+
+    if (!check_apic())
+    {
+        panic("APIC not supported.");
+    }
+
+    println("APIC supported.");
+
+    if (rsdp_request.response == NULL ||
+        rsdp_request.response->address == NULL)
+    {
+        panic("ACPI RSDP not found.");
+    }
+
+    if (hhdm_request.response == NULL)
+    {
+        panic("HHDM not available.");
+    }
+    paging_init(
+        memmap_request.response,
+        hhdm_request.response->offset
+    );
+
+    uintptr_t lapic_phys =
+        cpu_get_apic_base();
+
+    uintptr_t lapic_virt =
+        hhdm_request.response->offset +
+        lapic_phys;
+
+    if (!paging_map_page(
+        lapic_virt,
+        lapic_phys,
+        PAGE_WRITABLE |
+        PAGE_PCD |
+        PAGE_NX
+    ))
+{
+    panic("Could not map LAPIC.");
+}
+    void *rsdp =
+        rsdp_request.response->address;
+
+    uint64_t hhdm_offset =
+        hhdm_request.response->offset;
+
+
+
+
+    print("LAPIC physical base: ");
+    print_uint64((uint64_t)lapic_phys);
+    println("");
+
+    print("LAPIC virtual base: ");
+    print_uint64((uint64_t)lapic_virt);
+    println("");
+
+    apic_set_virtual_base(
+        lapic_virt
+    );
+
+    (void)rsdp;
+
+    println("Enabling Local APIC...");
+
+    if (!enable_apic())
+    {
+        panic("Local APIC initialization failed.");
+    }
+
+    println("Local APIC enabled.");
+
+    terminal_clear(
+        framebuffer,
+        0x00081A33
+    );
+
+    terminal_set_cursor(0, 0);
 
     println("Redux Kernel v0.0.2");
     terminal_putchar('\n');
@@ -105,11 +212,17 @@ void kmain(void)
     print("Available Memory: ");
     print_uint64(get_usable_ram_kb());
     println(" KB");
-    ata_initialize();
-    println("Initializing storage...");
-    
 
-    FRESULT result = f_mount(&g_filesystem, "0:", 1);
+    ata_initialize();
+
+    println("Initializing storage...");
+
+    FRESULT result =
+        f_mount(
+            &g_filesystem,
+            "0:",
+            1
+        );
 
     if (result == FR_OK)
     {
@@ -121,15 +234,19 @@ void kmain(void)
         print_uint64(result);
         println("");
     }
+
     program_initialize(framebuffer);
     shell_init(framebuffer);
-    
+
     while (1)
     {
         shell_update();
-        volatile int zero = 0;
-        volatile int result = 123 / zero;
-
-        (void)result;
     }
 }
+
+//Here is the code I had used to test kernel panics for the first time.
+// 15:21 @ 17/08/2026
+//volatile int zero = 0;
+//volatile int result = 123 / zero;
+
+//(void)result;
