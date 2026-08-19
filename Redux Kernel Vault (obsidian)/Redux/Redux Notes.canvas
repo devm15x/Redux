@@ -8,7 +8,8 @@
 		{"id":"73d10b86108729f8","type":"file","file":"Redux/ATA Storage Driver.md","x":-1220,"y":-260,"width":400,"height":400},
 		{"id":"23ae9deb6bf13cef","type":"file","file":"Redux/Terminal and Text.md","x":360,"y":-760,"width":400,"height":400},
 		{"id":"85de5b3311e98b89","type":"file","file":"Redux/redux.png","x":-1160,"y":-960,"width":400,"height":400},
-		{"id":"28fb11bc8b01d0ae","x":-1085,"y":-500,"width":250,"height":60,"type":"text","text":"Redux's Official Logo."}
+		{"id":"28fb11bc8b01d0ae","type":"text","text":"Redux's Official Logo.","x":-1085,"y":-500,"width":250,"height":60},
+		{"id":"ef20cdcf4bbb29d5","type":"file","file":"Redux/Timer.md","x":-160,"y":480,"width":400,"height":400}
 	],
 	"edges":[
 		{"id":"8e114b8a771eb8ee","fromNode":"ca7a8af5974950c0","fromSide":"right","toNode":"270114a5667a85f1","toSide":"left"},
@@ -18,6 +19,7 @@
 		{"id":"0c885c2e4b596da0","fromNode":"ca7a8af5974950c0","fromSide":"left","toNode":"73d10b86108729f8","toSide":"right"},
 		{"id":"40341890b2f2ed76","fromNode":"23ae9deb6bf13cef","fromSide":"left","toNode":"d2142e485aa985fd","toSide":"right"},
 		{"id":"6a60c2b0ef5a624c","fromNode":"23ae9deb6bf13cef","fromSide":"bottom","toNode":"960833a1d865ec5b","toSide":"top"},
-		{"id":"34593922cfa0f3b6","fromNode":"28fb11bc8b01d0ae","fromSide":"top","toNode":"85de5b3311e98b89","toSide":"bottom"}
+		{"id":"34593922cfa0f3b6","fromNode":"28fb11bc8b01d0ae","fromSide":"top","toNode":"85de5b3311e98b89","toSide":"bottom"},
+		{"id":"9b04c910510afc25","fromNode":"ef20cdcf4bbb29d5","fromSide":"top","toNode":"270114a5667a85f1","toSide":"bottom"}
 	]
 }

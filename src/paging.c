@@ -1,5 +1,5 @@
 #include "paging.h"
-
+#include "debug.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -7,8 +7,9 @@ static uint64_t g_hhdm_offset = 0;
 
 static uintptr_t next_free_page = 0;
 static uintptr_t free_region_end = 0;
+#define TEST_ADDRESS 0x0000000040000000ULL
 
-static void *phys_to_virt(
+void *paging_phys_to_virt(
     uintptr_t physical
 )
 {
@@ -30,10 +31,10 @@ static uintptr_t read_cr3(void)
     return value;
 }
 
-static uintptr_t allocate_table_page(void)
+uintptr_t paging_alloc_page(void)
 {
     if (next_free_page == 0 ||
-        next_free_page + 4096 >
+        next_free_page + PAGE_SIZE >
         free_region_end)
     {
         return 0;
@@ -42,16 +43,16 @@ static uintptr_t allocate_table_page(void)
     uintptr_t physical =
         next_free_page;
 
-    next_free_page += 4096;
+    next_free_page += PAGE_SIZE;
 
-    uint64_t *virtual =
-        (uint64_t *)
-        phys_to_virt(
+    uint8_t *virtual =
+        (uint8_t *)
+        paging_phys_to_virt(
             physical
         );
 
     for (size_t i = 0;
-         i < 512;
+         i < PAGE_SIZE;
          i++)
     {
         virtual[i] = 0;
@@ -59,6 +60,12 @@ static uintptr_t allocate_table_page(void)
 
     return physical;
 }
+
+static uintptr_t allocate_table_page(void)
+{
+    return paging_alloc_page();
+}
+
 
 static uint64_t *get_next_table(
     uint64_t *table,
@@ -69,42 +76,61 @@ static uint64_t *get_next_table(
     uint64_t entry =
         table[index];
 
-    if (!(entry & PAGE_PRESENT))
+    if (entry & PAGE_PRESENT)
     {
-        uintptr_t new_table =
-            allocate_table_page();
 
-        if (new_table == 0)
+        if (entry & PAGE_PS)
         {
             return NULL;
         }
 
-        table[index] =
-            new_table |
-            PAGE_PRESENT |
-            PAGE_WRITABLE |
-            flags;
 
-        entry =
-            table[index];
+        if (flags & PAGE_USER)
+        {
+            table[index] |=
+                PAGE_USER;
+
+            entry =
+                table[index];
+        }
+
+        uintptr_t physical =
+            entry &
+            PAGE_ADDRESS_MASK;
+
+        return
+            (uint64_t *)
+            paging_phys_to_virt(
+                physical
+            );
     }
-    else if (flags & PAGE_USER)
+
+    uintptr_t new_table =
+        allocate_table_page();
+
+    if (new_table == 0)
     {
-        table[index] |=
-            PAGE_USER;
-
-        entry =
-            table[index];
+        return NULL;
     }
 
-    uintptr_t physical =
-        entry &
-        0x000FFFFFFFFFF000ULL;
+    uint64_t table_flags =
+        PAGE_PRESENT |
+        PAGE_WRITABLE;
+
+    if (flags & PAGE_USER)
+    {
+        table_flags |=
+            PAGE_USER;
+    }
+
+    table[index] =
+        new_table |
+        table_flags;
 
     return
         (uint64_t *)
-        phys_to_virt(
-            physical
+        paging_phys_to_virt(
+            new_table
         );
 }
 
@@ -166,21 +192,21 @@ bool paging_map_page(
 )
 {
     virtual_address &=
-        ~((uintptr_t)0xFFF);
+        ~(PAGE_SIZE - 1);
 
     physical_address &=
-        ~((uintptr_t)0xFFF);
+        ~(PAGE_SIZE - 1);
 
     uintptr_t cr3 =
         read_cr3();
 
     uintptr_t pml4_physical =
         cr3 &
-        0x000FFFFFFFFFF000ULL;
+        PAGE_ADDRESS_MASK;
 
     uint64_t *pml4 =
         (uint64_t *)
-        phys_to_virt(
+        paging_phys_to_virt(
             pml4_physical
         );
 
@@ -200,7 +226,8 @@ bool paging_map_page(
         (virtual_address >> 12) &
         0x1FF;
 
-    uint64_t intermediate_flags = 0;
+    uint64_t intermediate_flags =
+        0;
 
     if (flags & PAGE_USER)
     {
@@ -245,8 +272,11 @@ bool paging_map_page(
     }
 
     pt[pt_index] =
-        physical_address |
-        flags |
+        (physical_address &
+         PAGE_ADDRESS_MASK)
+        |
+        flags
+        |
         PAGE_PRESENT;
 
     __asm__ volatile(
@@ -255,6 +285,70 @@ bool paging_map_page(
         : "r"(virtual_address)
         : "memory"
     );
+
+    return true;
+}
+
+bool paging_test(void)
+{
+    qemu_debug_print("[PAGING] Starting USER page test...\n");
+
+    uintptr_t physical =
+        paging_alloc_page();
+
+    if (physical == 0)
+    {
+        qemu_debug_print("[PAGING] FAIL: allocation failed\n");
+        return false;
+    }
+
+    if (!paging_map_page(
+            TEST_ADDRESS,
+            physical,
+            PAGE_USER |
+            PAGE_WRITABLE))
+    {
+        qemu_debug_print("[PAGING] FAIL: user mapping failed\n");
+        return false;
+    }
+
+    qemu_debug_print("[PAGING] User page mapped\n");
+
+    volatile uint64_t *test =
+        (volatile uint64_t *)
+        TEST_ADDRESS;
+
+    const uint64_t test_value =
+        0xCAFEBABEDEADBEEFULL;
+
+    /*
+     * Ring 0 is allowed to access user pages,
+     * so this tests the mapping without entering Ring 3 yet.
+     */
+    *test = test_value;
+
+    if (*test != test_value)
+    {
+        qemu_debug_print("[PAGING] FAIL: virtual readback mismatch\n");
+        return false;
+    }
+
+    /*
+     * Check the same physical page through the HHDM.
+     */
+    volatile uint64_t *physical_view =
+        (volatile uint64_t *)
+        paging_phys_to_virt(
+            physical
+        );
+
+    if (*physical_view != test_value)
+    {
+        qemu_debug_print("[PAGING] FAIL: physical readback mismatch\n");
+        return false;
+    }
+
+    qemu_debug_print("[PAGING] USER PAGE SUCCESS!\n");
 
     return true;
 }

@@ -18,6 +18,10 @@
 #include "paging.h"
 #include "clock.h"
 #include "acpi.h"
+#include "userspace.h"
+#include "syscall.h"
+#define USER_CODE_ADDRESS 0x0000000040000000ULL
+#define USER_STACK_TOP    0x0000000080000000ULL
 
 //here are some attributes, now go have fun and leave me alone
 __attribute__((used, section(".limine_requests_start")))
@@ -156,12 +160,11 @@ void kmain(void)
         hhdm_request.response->offset +
         lapic_phys;
 
-    if (!paging_map_page(
+if (!paging_map_page(
         lapic_virt,
         lapic_phys,
         PAGE_WRITABLE |
-        PAGE_PCD |
-        PAGE_NX
+        PAGE_PCD
     ))
 {
     panic("Could not map LAPIC.");
@@ -290,7 +293,9 @@ uint32_t cursor_ticks =
 
     program_initialize(framebuffer);
     shell_init(framebuffer);
-
+    paging_test();
+    syscall_init(); 
+    usermode_test();
     while (1)
     {
         shell_update();
