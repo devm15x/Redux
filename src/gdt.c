@@ -116,7 +116,7 @@ void gdt_init(void)
 
     ring3_data->long_mode = 0;
 
-    ring3_data->big = 0;
+    ring3_data->big = 1;
 
     init_tss();
 

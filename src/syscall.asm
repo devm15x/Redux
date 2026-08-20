@@ -4,63 +4,53 @@ global syscall_entry
 
 extern syscall_kernel_stack_top
 extern syscall_dispatch
+extern usermode_return_rsp
+extern usermode_return_rip
+
+section .bss
+align 8
+
+syscall_user_rsp:
+    resq 1
 
 section .text
 
 syscall_entry:
-    ; On SYSCALL:
-    ;
-    ; RCX = user RIP
-    ; R11 = user RFLAGS
-    ; RSP = STILL user RSP
-    ; RAX = syscall number
-
-    ;
-    ; Save userspace RSP before switching stacks.
-    ;
-    mov rdx, rsp
-
-    ;
-    ; Switch to our kernel syscall stack.
-    ;
+    mov [rel syscall_user_rsp], rsp
     mov rsp, [rel syscall_kernel_stack_top]
 
-    ;
-    ; Construct an IRETQ frame so we can return
-    ; to Ring 3 later.
-    ;
-
-    ; SS
-    push qword 0x23
-
-    ; User RSP
-    push rdx
-
-    ; User RFLAGS
-    push r11
-
-    ; User CS
-    push qword 0x1B
-
-    ; User RIP
     push rcx
+    push r11
+    push rdi
+    push rsi
+    push rdx
+    push r10
+    push r8
+    push r9
 
-    ;
-    ; RAX contains syscall number.
-    ; First C argument goes in RDI.
-    ;
+    mov rsi, rdi
     mov rdi, rax
-
-    ;
-    ; Keep stack correctly aligned for the C call.
-    ;
-    sub rsp, 8
 
     call syscall_dispatch
 
-    add rsp, 8
+    cmp rax, 1
+    je .exit
 
-    ;
-    ; Return to Ring 3.
-    ;
-    iretq
+    pop r9
+    pop r8
+    pop r10
+    pop rdx
+    pop rsi
+    pop rdi
+
+    pop r11
+    pop rcx
+
+    mov rsp, [rel syscall_user_rsp]
+
+    o64 sysret
+
+.exit:
+    mov rsp, [rel usermode_return_rsp]
+    sti
+    jmp [rel usermode_return_rip]

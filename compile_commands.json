@@ -1,0 +1,40 @@
+[
+  {
+    "directory": "C:/Users/DanielFenech/Documents/reduxkernel",
+    "file": "src/elf3.c",
+    "output": "obj/src/elf3.c.o",
+    "arguments": [
+      "C:/cross/bin/x86_64-elf-gcc.exe",
+      "-g",
+      "-O2",
+      "-pipe",
+      "-Wall",
+      "-Wextra",
+      "-std=gnu11",
+      "-ffreestanding",
+      "-fno-stack-protector",
+      "-fno-stack-check",
+      "-fno-lto",
+      "-fno-PIC",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-m64",
+      "-march=x86-64",
+      "-mabi=sysv",
+      "-mno-80387",
+      "-mno-mmx",
+      "-mno-sse",
+      "-mno-sse2",
+      "-mno-red-zone",
+      "-mcmodel=kernel",
+      "-I",
+      "src",
+      "-I",
+      "src/drivers",
+      "-c",
+      "src/elf3.c",
+      "-o",
+      "obj/src/elf3.c.o"
+    ]
+  }
+]

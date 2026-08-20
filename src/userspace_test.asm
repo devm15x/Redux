@@ -6,12 +6,14 @@ global user_test_end
 section .text
 
 user_test_start:
-
+    lea rdi, [rel message]
     mov rax, 1
     syscall
 
-.loop:
-    pause
-    jmp .loop
+    mov rax, 2
+    syscall
+
+message:
+    db "Userspace loaded sucsessfully", 0
 
 user_test_end:

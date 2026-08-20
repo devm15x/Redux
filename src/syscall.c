@@ -92,10 +92,15 @@ void syscall_init(void)
     );
 }
 
-void syscall_dispatch(uint64_t number)
+uint64_t syscall_dispatch(uint64_t number, uint64_t arg1)
 {
     if (number == 1)
     {
-        println("Hello World from Ring 3!");
+        println((const char *)arg1);
+    }
+
+    if (number == 2)
+    {
+        return 1;
     }
 }

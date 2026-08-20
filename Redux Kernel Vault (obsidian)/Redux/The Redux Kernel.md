@@ -13,7 +13,7 @@ Redux follows a strict release workflow to ensure stability before going public.
 
 ---
 
-## 🛠️ System Architecture
+##  System Architecture
 
 ### 1. CPU Mode & Initialization
 * **Architecture:** Intel/AMD x86_64 Long Mode.

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <limine.h>
+#include "limine.h"
 
 #include "psf.h"
 #include "terminal.h"
@@ -251,6 +251,10 @@ uint32_t cursor_ticks =
         cursor_ticks
     );
 
+    paging_test();
+    syscall_init(); 
+    usermode_test();
+
     __asm__ volatile("sti");
     terminal_clear(
         framebuffer,
@@ -293,9 +297,6 @@ uint32_t cursor_ticks =
 
     program_initialize(framebuffer);
     shell_init(framebuffer);
-    paging_test();
-    syscall_init(); 
-    usermode_test();
     while (1)
     {
         shell_update();

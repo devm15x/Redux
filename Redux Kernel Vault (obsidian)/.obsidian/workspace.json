@@ -30,26 +30,43 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Redux/Artificial Intelligence Converted and Edited Tutorials/Getting to Ring 3 (64-bit Long Mode).md",
+                "file": "Redux/Artificial Intelligence Converted and Edited Tutorials/Getting to Ring 3.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Getting to Ring 3 (64-bit Long Mode)"
+              "title": "Getting to Ring 3"
             }
           },
           {
             "id": "d872e751d8f57c5c",
             "type": "leaf",
             "state": {
+              "type": "canvas",
+              "state": {
+                "file": "Redux/Redux Notes.canvas",
+                "viewState": {
+                  "x": 40,
+                  "y": 80,
+                  "zoom": 0
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "Redux Notes"
+            }
+          },
+          {
+            "id": "88d0bdd1ffb67368",
+            "type": "leaf",
+            "state": {
               "type": "markdown",
               "state": {
-                "file": "Redux/Artificial Intelligence Converted and Edited Tutorials/Getting to Ring 3 (64-bit Long Mode).md",
-                "mode": "preview",
+                "file": "Redux/Artificial Intelligence Converted and Edited Tutorials/System Calls.md",
+                "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Getting to Ring 3 (64-bit Long Mode)"
+              "title": "System Calls"
             }
           },
           {
@@ -109,7 +126,7 @@
             }
           }
         ],
-        "currentTab": 2
+        "currentTab": 3
       }
     ],
     "direction": "vertical"
@@ -276,21 +293,22 @@
       "bases:Create new base": false
     }
   },
-  "active": "d872e751d8f57c5c",
+  "active": "88d0bdd1ffb67368",
   "lastOpenFiles": [
-    "Redux/Artificial Intelligence Converted and Edited Tutorials/Paging.md",
-    "Redux/Artificial Intelligence Converted and Edited Tutorials/Getting to Ring 3 (64-bit Long Mode).md",
-    "Redux/Artificial Intelligence Converted and Edited Tutorials",
+    "Redux/Artificial Intelligence Converted and Edited Tutorials/Getting to Ring 3.md",
+    "Redux/ATA Storage Driver.md",
     "Redux/Filesystem.md",
-    "Redux/Panic.md",
-    "Redux/redux.png",
+    "Redux/Artificial Intelligence Converted and Edited Tutorials/System Calls.md",
     "Redux/Redux Notes.canvas",
-    "Redux/Timer.md",
+    "Redux/Artificial Intelligence Converted and Edited Tutorials/Paging.md",
     "Redux/The Redux Kernel.md",
+    "Redux/Panic.md",
+    "Redux/Programs running in Ring 0.md",
+    "Redux/redux.png",
+    "Redux/Artificial Intelligence Converted and Edited Tutorials",
+    "Redux/Timer.md",
     "Redux/The Redux Documentation.base",
     "Redux/Terminal and Text.md",
-    "Redux/Shell.md",
-    "Redux/Programs running in Ring 0.md",
-    "Redux/ATA Storage Driver.md"
+    "Redux/Shell.md"
   ]
 }
