@@ -40,7 +40,7 @@ Redux follows a strict release workflow to ensure stability before going public.
 ##  Compliance & Contribution Licensing
 
 ### The Holy Labyrinth Clause (Section 4.2)
-Any downstream open-source contributor or developer cloning Redux from Codeberg who alters, shortens, renames, deletes, or optimizes the directory chain path extending from `\top secret\` to `\PANIC IM ABOUT TO DIE PANIC PANIC PANIC\` will face an automatic, unappealable, and permanent ban from the core dev organization. The humor stays. OR ELSE... i will execute you in Minecraft.
+Any downstream open-source contributor or developer cloning Redux from Codeberg who alters, shortens, renames, deletes, or optimizes the directory chain path extending from `\top secret\` to `\PANIC IM ABOUT TO DIE PANIC PANIC PANIC\` will face an automatic, unappealable, and permanent ban from the core stupid idiot of ohio organization. The humor stays. OR ELSE... i will execute you in Minecraft.
 
 
 

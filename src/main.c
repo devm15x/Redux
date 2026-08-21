@@ -95,7 +95,11 @@ static void halt(void)
 }
 
 static FATFS g_filesystem;
-
+//psst
+//if you think redux is horribly written
+//i tell you this
+//get it done, fix it up, if it works, screw it
+//now get lost
 void kmain(void)
 {
     if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))

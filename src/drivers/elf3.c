@@ -5,6 +5,11 @@
 
 #define ELF_PROGRAM_MEMORY_SIZE (1024 * 1024)
 
+uint64_t zero_start;
+uint64_t zero_count;
+const uint8_t *ring3source;
+void *p; 
+void *z;
 static uint8_t program_memory[ELF_PROGRAM_MEMORY_SIZE]
     __attribute__((aligned(4096), section(".program_memory")));
 
@@ -35,6 +40,26 @@ static void elf_zero(void *destination, size_t count)
     {
         bytes[i] = 0;
     }
+}
+
+// 0 = SUCSESS
+// 1 = Allocation Error
+// 2 = Mapping Error
+uint64_t current_page;
+uintptr_t page_allocate;
+int elf_allocate_pages() {
+    current_page = page_start;
+    while (current_page < page_end){
+        page_allocate = paging_alloc_page();
+        if (page_allocate == 0) {
+            return 1;
+        }
+        if (!paging_map_page(current_page, page_allocate, PAGE_USER)) {
+            return 2;
+        }
+        current_page += PAGE_SIZE;
+    }
+    return 0;
 }
 
 static int range_is_valid(
@@ -70,12 +95,12 @@ elf_load_info_t load_elf3_binary(
     const void *file_buffer,
     size_t file_size
 )
-{
+{   
     if (file_buffer == 0)
     {
         return elf_failure(ELF_LOAD_NULL_BUFFER);
     }
-
+    const uint8_t *bfr = NULL;
     if (file_size < sizeof(elf64_header_t))
     {
         return elf_failure(ELF_LOAD_FILE_TOO_SMALL);
@@ -171,6 +196,7 @@ elf_load_info_t load_elf3_binary(
             return elf_failure(ELF_LOAD_BAD_SEGMENT);
         }
 
+        
         if (!range_is_valid(
                 program_header->p_offset,
                 program_header->p_filesz,
@@ -178,27 +204,24 @@ elf_load_info_t load_elf3_binary(
         {
             return elf_failure(ELF_LOAD_BAD_SEGMENT);
         }
-
+        
         if (program_header->p_vaddr < lowest_address)
         {
             lowest_address = program_header->p_vaddr;
         }
-
+        
         if (program_header->p_memsz >
             UINT64_MAX - program_header->p_vaddr)
         {
             return elf_failure(ELF_LOAD_BAD_SEGMENT);
         }
-        address = program_header->p_vaddr;
-        page_start = address & ~(PAGE_SIZE - 1);
-        segment_end = program_header -> p_vaddr + program_header-> p_memsz;
-        page_end = (segment_end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-
-
+        segment_end = program_header->p_vaddr + program_header->p_memsz;
+        
         if (segment_end > highest_address)
         {
             highest_address = segment_end;
         }
+        ring3source = bfr + program_header->p_offset;
     }
 
     if (!found_loadable_segment ||
@@ -216,10 +239,10 @@ elf_load_info_t load_elf3_binary(
         return elf_failure(ELF_LOAD_PROGRAM_TOO_LARGE);
     }
 
+
     /*
      * Clear the arena so old program data cannot leak into the next one.
      */
-    elf_zero(program_memory, ELF_PROGRAM_MEMORY_SIZE);
 
     /*
      * Second pass:
@@ -242,7 +265,23 @@ elf_load_info_t load_elf3_binary(
         {
             continue;
         }
+            address = program_header->p_vaddr;
+            page_start = address & ~(PAGE_SIZE - 1);
+            segment_end = program_header -> p_vaddr + program_header-> p_memsz;
+            page_end = (segment_end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+            int result = elf_allocate_pages();
+            if (result == 1) {
+                return elf_failure(ELF_PAGING_BAD);
+            }
+            else if (result == 2) {
+                return elf_failure(ELF_PAGING_BAD);
+            }
+            p = (void*)(uintptr_t)address; 
+            zero_start = address + program_header->p_filesz;
+            zero_count = program_header->p_memsz - program_header -> p_filesz;
+            z = (void*)(uintptr_t)zero_start; 
 
+        
         uint64_t destination_offset =
             program_header->p_vaddr -
             lowest_address;
@@ -251,6 +290,7 @@ elf_load_info_t load_elf3_binary(
         {
             return elf_failure(ELF_LOAD_PROGRAM_TOO_LARGE);
         }
+        
 
         if (program_header->p_memsz >
             ELF_PROGRAM_MEMORY_SIZE - destination_offset)
@@ -259,8 +299,7 @@ elf_load_info_t load_elf3_binary(
         }
 
         uint8_t *destination =
-            program_memory + destination_offset;
-
+            p;
         const uint8_t *source =
             file_bytes + program_header->p_offset;
 
@@ -299,8 +338,8 @@ elf_load_info_t load_elf3_binary(
     }
 
     elf_load_info_t info;
-
-    info.entry = program_memory + entry_offset;
+    void * e = (void*)(uintptr_t)header->e_entry; 
+    info.entry = e;
     info.result = ELF_LOAD_OK;
 
     return info;
@@ -354,24 +393,4 @@ const char *elf3_load_error_string(elf_load_result_t result)
             return "Unknown ELF error";
     }
     
-}
-
-// 0 = SUCSESS
-// 1 = Allocation Error
-// 2 = Mapping Error
-uint64_t current_page;
-uintptr_t page_allocate;
-int elf_allocate_pages() {
-    current_page = page_start;
-    while (current_page < page_end){
-        page_allocate = paging_alloc_page();
-        if (page_allocate == 0) {
-            return 1;
-        }
-        if (!paging_map_page(current_page, page_allocate, PAGE_USER)) {
-            return 2;
-        }
-        current_page += PAGE_SIZE;
-    }
-    return 0;
 }

@@ -61,12 +61,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Redux/Artificial Intelligence Converted and Edited Tutorials/System Calls.md",
+                "file": "Redux/The Redux Kernel.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "System Calls"
+              "title": "The Redux Kernel"
             }
           },
           {
@@ -295,16 +295,16 @@
   },
   "active": "88d0bdd1ffb67368",
   "lastOpenFiles": [
+    "Redux/Redux Notes.canvas",
+    "Redux/redux.png",
+    "Redux/Artificial Intelligence Converted and Edited Tutorials/System Calls.md",
     "Redux/Artificial Intelligence Converted and Edited Tutorials/Getting to Ring 3.md",
     "Redux/ATA Storage Driver.md",
     "Redux/Filesystem.md",
-    "Redux/Artificial Intelligence Converted and Edited Tutorials/System Calls.md",
-    "Redux/Redux Notes.canvas",
     "Redux/Artificial Intelligence Converted and Edited Tutorials/Paging.md",
     "Redux/The Redux Kernel.md",
     "Redux/Panic.md",
     "Redux/Programs running in Ring 0.md",
-    "Redux/redux.png",
     "Redux/Artificial Intelligence Converted and Edited Tutorials",
     "Redux/Timer.md",
     "Redux/The Redux Documentation.base",
