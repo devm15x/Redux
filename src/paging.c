@@ -1,3 +1,5 @@
+// please kill me
+// ram sucks
 #include "paging.h"
 #include "debug.h"
 #include <stdint.h>

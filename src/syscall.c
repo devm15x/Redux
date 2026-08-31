@@ -97,10 +97,25 @@ uint64_t syscall_dispatch(uint64_t number, uint64_t arg1)
     if (number == 1)
     {
         println((const char *)arg1);
+        return 0;
     }
 
     if (number == 2)
     {
         return 1;
+    }
+    if (number == 3)
+    {
+        print((const char *)arg1);
+        return 0;
+    }
+    if (number == 4)
+    {
+        terminal_putchar(arg1);
+        return 0;
+    }
+    if (number == 5) {
+        terminal_clear(terminal_get_framebuffer(), 0x00081A33);
+        return 0;
     }
 }

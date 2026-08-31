@@ -9,7 +9,8 @@
 
 extern void jump_usermode(
     uint64_t rip,
-    uint64_t rsp
+    uint64_t rsp,
+    uint64_t api
 );
 
 extern uint8_t user_test_start[];
@@ -118,7 +119,8 @@ void usermode_test(void)
 
     jump_usermode(
         USER_CODE_ADDRESS,
-        USER_STACK_TOP
+        USER_STACK_TOP,
+        0
     );
 
     qemu_debug_print(

@@ -54,7 +54,7 @@ int elf_allocate_pages() {
         if (page_allocate == 0) {
             return 1;
         }
-        if (!paging_map_page(current_page, page_allocate, PAGE_USER)) {
+        if (!paging_map_page(current_page, page_allocate, PAGE_USER | PAGE_WRITABLE)) {
             return 2;
         }
         current_page += PAGE_SIZE;

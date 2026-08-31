@@ -37,8 +37,8 @@ static gdt_entry_bits gdt[7];
 gdt_entry_bits *ring0_code = &gdt[1];
 gdt_entry_bits *ring0_data = &gdt[2];
 
-gdt_entry_bits *ring3_code = &gdt[3];
-gdt_entry_bits *ring3_data = &gdt[4];
+gdt_entry_bits *ring3_data = &gdt[3];
+gdt_entry_bits *ring3_code = &gdt[4];
 
 
 

@@ -1,8 +1,14 @@
+// The Redux Kernel 
+// by devm15
+// Copyright (C) devm15 2026 
+// Have fun
+// from the local idiot XD
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include "limine.h"
 
+#include "program3.h"
 #include "psf.h"
 #include "terminal.h"
 #include "drivers/ascii.h"
@@ -267,7 +273,7 @@ uint32_t cursor_ticks =
 
     terminal_set_cursor(0, 0);
 
-    println("Redux Kernel v0.0.2");
+    println("Redux Kernel v0.1.0 Milestone 1");
     terminal_putchar('\n');
 
     println("Copyright (C) 2026-present devm15");
@@ -300,6 +306,7 @@ uint32_t cursor_ticks =
     }
 
     program_initialize(framebuffer);
+    program_initialize3(framebuffer);
     shell_init(framebuffer);
     while (1)
     {

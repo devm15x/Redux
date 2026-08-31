@@ -7,7 +7,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "drivers/elf.h"
+#include "drivers/elf3.h"
 #include "program0.h"
+#include "program3.h"
 
 #define SHELL_BUFFER_SIZE 128
 #define SHELL_MAX_ARGS 16
@@ -196,7 +198,7 @@ static void shell_execute(void)
     }
     else if (strings_equal(argv[0], "ver"))
     {
-        println("Redux Kernel v0.0.1");
+        println("Redux Kernel v0.1.0 Milestone 1");
     }
     else if (strings_equal(argv[0], "echo"))
     {
@@ -223,7 +225,7 @@ static void shell_execute(void)
     else if (strings_equal(argv[0], "touchtest")) {
         shell_create_test_file();
     }
-    else if (strings_equal(argv[0], "run"))
+    else if (strings_equal(argv[0], "run0"))
     {
         if (argc < 2)
         {
@@ -232,6 +234,17 @@ static void shell_execute(void)
         else
         {
             program_run(argv[1]);
+        }
+    }
+    else if (strings_equal(argv[0], "run"))
+    {
+        if (argc < 2)
+        {
+            println("Usage: run <file>");
+        }
+        else
+        {
+            program_run3(argv[1]);
         }
     }
     else if (strings_equal(argv[0], "dir")){

@@ -67,11 +67,11 @@ typedef struct
     elf_load_result_t result;
 } elf_load_info_t;
 
-elf_load_info_t load_elf_binary(
+elf_load_info_t load_elf3_binary(
     const void *file_buffer,
     size_t file_size
 );
 
-const char *elf_load_error_string(elf_load_result_t result);
+const char *elf3_load_error_string(elf_load_result_t result);
 
 #endif

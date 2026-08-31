@@ -4,9 +4,10 @@
 #include "drivers/ff.h"
 #include "drivers/ascii.h"
 #include "drivers/keyboard.h"
-
+#include "userspace.h"
 #include "redux_api.h"
 #include "terminal.h"
+#include "paging.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -14,29 +15,42 @@
 #define PROGRAM_FILE_BUFFER_SIZE (1024 * 1024)
 #define PROGRAM_DEBUG 0
 
-/*
- * Buffer used to read the ELF file from disk.
- *
- * Alignment is useful because this buffer contains ELF structures
- * with 64-bit members.
- */
+#define USER_STACK_SIZE 16384
+#define USER_STACK_TOP 0x0000000080000000ULL
+#define USER_STACK_BOTTOM (USER_STACK_TOP - USER_STACK_SIZE)
+
+#define USER_API_ADDRESS 0x0000000070000000ULL
+#define USER_API_PRINT (USER_API_ADDRESS + 0x100)
+#define USER_API_PRINTLN (USER_API_ADDRESS + 0x120)
+#define USER_API_PUTCHAR (USER_API_ADDRESS + 0x140)
+#define USER_API_CLEAR (USER_API_ADDRESS + 0x160)
+#define USER_API_EXIT (USER_API_ADDRESS + 0x180)
+
 static uint8_t program_file_buffer[
     PROGRAM_FILE_BUFFER_SIZE
 ] __attribute__((aligned(16)));
 
-/*
- * The framebuffer is kept inside the kernel.
- *
- * Ring-0 programs only see api->clear(), not Limine directly.
- */
 static struct limine_framebuffer *
     g_program_framebuffer = NULL;
 
+static int program_user_runtime_ready = 0;
 
-/* ============================================================
- * Redux API wrappers
- * ============================================================
- */
+static uint64_t redux_syscall(
+    uint64_t number,
+    uint64_t arg1
+)
+{
+    uint64_t result = number;
+
+    __asm__ volatile(
+        "syscall"
+        : "+a"(result)
+        : "D"(arg1)
+        : "rcx", "r11", "memory"
+    );
+
+    return result;
+}
 
 static void api_set_cursor(
     uint32_t x,
@@ -48,14 +62,16 @@ static void api_set_cursor(
 
 static void api_clear(void)
 {
+    uint64_t voidedstuff = 0;
+
     if (g_program_framebuffer == NULL)
     {
         return;
     }
 
-    terminal_clear(
-        g_program_framebuffer,
-        0x00081A33
+    redux_syscall(
+        5,
+        voidedstuff
     );
 }
 
@@ -67,38 +83,277 @@ void program_initialize3(
         framebuffer;
 }
 
+static void api_print(
+    const char *text
+)
+{
+    uint64_t textpointer =
+        (uint64_t)(uintptr_t)text;
 
-/* ============================================================
- * Redux Ring-0 API
- * ============================================================
- */
+    redux_syscall(
+        3,
+        textpointer
+    );
+}
+
+static void api_println(
+    const char *text
+)
+{
+    uint64_t textpointer =
+        (uint64_t)(uintptr_t)text;
+
+    redux_syscall(
+        1,
+        textpointer
+    );
+}
+
+static void api_return(
+    const char *text
+)
+{
+    (void)text;
+
+    uint64_t voidedstuff = 0;
+
+    redux_syscall(
+        2,
+        voidedstuff
+    );
+}
+
+static void api_putchar(
+    char character
+)
+{
+    redux_syscall(
+        4,
+        (uint64_t)(unsigned char)character
+    );
+}
 
 static const redux_api_t redux_api =
 {
     .version = REDUX_API_VERSION,
-
-    .print = print,
-    .println = println,
-    .putchar = terminal_putchar,
-    .print_uint64 = print_uint64,
-
+    .print = api_print,
+    .println = api_println,
+    .putchar = api_putchar,
     .clear = api_clear,
-
-    .keyboard_get_scancode =
-        keyboard_get_scancode,
-
-    .scancode_to_ascii =
-        scancode_to_ascii,
-
-    .set_cursor =
-        api_set_cursor
 };
 
+static void program_write_bytes(
+    uint64_t address,
+    const uint8_t *bytes,
+    size_t count
+)
+{
+    uint8_t *destination =
+        (uint8_t *)(uintptr_t)address;
 
-/* ============================================================
- * Debugging
- * ============================================================
- */
+    for (
+        size_t i = 0;
+        i < count;
+        i++
+    )
+    {
+        destination[i] =
+            bytes[i];
+    }
+}
+
+static int program_setup_user_runtime(void)
+{
+    if (program_user_runtime_ready)
+    {
+        return 1;
+    }
+
+    for (
+        uint64_t address =
+            USER_STACK_BOTTOM;
+        address < USER_STACK_TOP;
+        address += PAGE_SIZE
+    )
+    {
+        uintptr_t physical =
+            paging_alloc_page();
+
+        if (physical == 0)
+        {
+            return 0;
+        }
+
+        if (!paging_map_page(
+                address,
+                physical,
+                PAGE_USER |
+                PAGE_WRITABLE))
+        {
+            return 0;
+        }
+    }
+
+    uintptr_t api_physical =
+        paging_alloc_page();
+
+    if (api_physical == 0)
+    {
+        return 0;
+    }
+
+    if (!paging_map_page(
+            USER_API_ADDRESS,
+            api_physical,
+            PAGE_USER |
+            PAGE_WRITABLE))
+    {
+        return 0;
+    }
+
+    static const uint8_t
+        print_stub[] =
+    {
+        0xB8,
+        0x03,
+        0x00,
+        0x00,
+        0x00,
+        0x0F,
+        0x05,
+        0xC3
+    };
+
+    static const uint8_t
+        println_stub[] =
+    {
+        0xB8,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x0F,
+        0x05,
+        0xC3
+    };
+
+    static const uint8_t
+        putchar_stub[] =
+    {
+        0x40,
+        0x0F,
+        0xB6,
+        0xFF,
+        0xB8,
+        0x04,
+        0x00,
+        0x00,
+        0x00,
+        0x0F,
+        0x05,
+        0xC3
+    };
+
+    static const uint8_t
+        clear_stub[] =
+    {
+        0x31,
+        0xFF,
+        0xB8,
+        0x05,
+        0x00,
+        0x00,
+        0x00,
+        0x0F,
+        0x05,
+        0xC3
+    };
+
+    static const uint8_t
+        exit_stub[] =
+    {
+        0x89,
+        0xC7,
+        0xB8,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x0F,
+        0x05,
+        0x0F,
+        0x0B
+    };
+
+    program_write_bytes(
+        USER_API_PRINT,
+        print_stub,
+        sizeof(print_stub)
+    );
+
+    program_write_bytes(
+        USER_API_PRINTLN,
+        println_stub,
+        sizeof(println_stub)
+    );
+
+    program_write_bytes(
+        USER_API_PUTCHAR,
+        putchar_stub,
+        sizeof(putchar_stub)
+    );
+
+    program_write_bytes(
+        USER_API_CLEAR,
+        clear_stub,
+        sizeof(clear_stub)
+    );
+
+    program_write_bytes(
+        USER_API_EXIT,
+        exit_stub,
+        sizeof(exit_stub)
+    );
+
+    redux_api_t *user_api =
+        (redux_api_t *)(uintptr_t)
+        USER_API_ADDRESS;
+
+    uint8_t *api_bytes =
+        (uint8_t *)user_api;
+
+    for (
+        size_t i = 0;
+        i < sizeof(redux_api_t);
+        i++
+    )
+    {
+        api_bytes[i] = 0;
+    }
+
+    user_api->version =
+        REDUX_API_VERSION;
+
+    user_api->print =
+        (void (*)(const char *))
+        (uintptr_t)USER_API_PRINT;
+
+    user_api->println =
+        (void (*)(const char *))
+        (uintptr_t)USER_API_PRINTLN;
+
+    user_api->putchar =
+        (void (*)(char))
+        (uintptr_t)USER_API_PUTCHAR;
+
+    user_api->clear =
+        (void (*)(void))
+        (uintptr_t)USER_API_CLEAR;
+
+    program_user_runtime_ready = 1;
+
+    return 1;
+}
 
 #if PROGRAM_DEBUG
 
@@ -173,9 +428,9 @@ static void debug_print_path(
     )
 
 #define PROGRAM_DEBUG_HEX(name, value) \
-    debug_print_hex(                   \
-        name,                          \
-        (uint64_t)(uintptr_t)(value)   \
+    debug_print_hex(                    \
+        name,                           \
+        (uint64_t)(uintptr_t)(value)    \
     )
 
 #define PROGRAM_DEBUG_PATH(path) \
@@ -215,12 +470,6 @@ static void debug_print_path(
 
 #endif
 
-
-/* ============================================================
- * Program loader
- * ============================================================
- */
-
 void program_run3(
     const char *path
 )
@@ -234,9 +483,6 @@ void program_run3(
         path
     );
 
-    /*
-     * Validate the path before touching it.
-     */
     if (path == NULL)
     {
         PROGRAM_DEBUG_MESSAGE(
@@ -264,12 +510,6 @@ void program_run3(
     }
 
     PROGRAM_DEBUG_PATH(path);
-
-
-    /* ========================================================
-     * Open file
-     * ========================================================
-     */
 
     FIL file;
     FRESULT result;
@@ -308,12 +548,6 @@ void program_run3(
     PROGRAM_DEBUG_MESSAGE(
         "Program file opened."
     );
-
-
-    /* ========================================================
-     * Validate file size
-     * ========================================================
-     */
 
     FSIZE_t file_size =
         f_size(&file);
@@ -373,12 +607,6 @@ void program_run3(
         program_file_buffer
     );
 
-
-    /* ========================================================
-     * Read file
-     * ========================================================
-     */
-
     UINT bytes_read = 0;
 
     PROGRAM_DEBUG_MESSAGE(
@@ -401,12 +629,6 @@ void program_run3(
         "Bytes read",
         bytes_read
     );
-
-
-    /* ========================================================
-     * Close file
-     * ========================================================
-     */
 
     PROGRAM_DEBUG_MESSAGE(
         "Calling f_close."
@@ -481,12 +703,6 @@ void program_run3(
         "File read completed successfully."
     );
 
-
-    /* ========================================================
-     * ELF debug header
-     * ========================================================
-     */
-
     PROGRAM_DEBUG_HEX(
         "ELF byte 0",
         program_file_buffer[0]
@@ -507,18 +723,12 @@ void program_run3(
         program_file_buffer[3]
     );
 
-
-    /* ========================================================
-     * Load ELF
-     * ========================================================
-     */
-
     PROGRAM_DEBUG_MESSAGE(
         "Calling load_elf_binary."
     );
 
     elf_load_info_t load_info =
-        load_elf_binary(
+        load_elf3_binary(
             program_file_buffer,
             (size_t)file_size
         );
@@ -541,7 +751,7 @@ void program_run3(
         );
 
         println(
-            elf_load_error_string(
+            elf3_load_error_string(
                 load_info.result
             )
         );
@@ -563,12 +773,6 @@ void program_run3(
         return;
     }
 
-
-    /* ========================================================
-     * Convert ELF entry into Redux entry point
-     * ========================================================
-     */
-
     redux_program_entry_t entry =
         (redux_program_entry_t)
         load_info.entry;
@@ -580,34 +784,13 @@ void program_run3(
 
     PROGRAM_DEBUG_HEX(
         "Redux API address",
-        &redux_api
+        USER_API_ADDRESS
     );
 
     PROGRAM_DEBUG_UINT(
         "Redux API version",
-        redux_api.version
+        REDUX_API_VERSION
     );
-
-    PROGRAM_DEBUG_HEX(
-        "Redux API print",
-        redux_api.print
-    );
-
-    PROGRAM_DEBUG_HEX(
-        "Redux API println",
-        redux_api.println
-    );
-
-    PROGRAM_DEBUG_HEX(
-        "Redux API putchar",
-        redux_api.putchar
-    );
-
-
-    /* ========================================================
-     * Execute program
-     * ========================================================
-     */
 
     println(
         "Launching program..."
@@ -617,8 +800,31 @@ void program_run3(
         "About to call ELF entry."
     );
 
-    int exit_code =
-        entry(&redux_api);
+    int exit_code = 0;
+
+    if (!program_setup_user_runtime())
+    {
+        println(
+            "Could not set up userspace."
+        );
+
+        return;
+    }
+
+    uint64_t user_rsp =
+        USER_STACK_TOP -
+        sizeof(uint64_t);
+
+    *(uint64_t *)(uintptr_t)
+        user_rsp =
+            USER_API_EXIT;
+
+    jump_usermode(
+        (uint64_t)(uintptr_t)
+            load_info.entry,
+        user_rsp,
+        USER_API_ADDRESS
+    );
 
     PROGRAM_DEBUG_MESSAGE(
         "ELF entry returned successfully."
@@ -629,12 +835,6 @@ void program_run3(
         exit_code
     );
 
-
-    /* ========================================================
-     * Print exit status
-     * ========================================================
-     */
-
     print(
         "Program exited with code "
     );
@@ -643,10 +843,6 @@ void program_run3(
     {
         print("-");
 
-        /*
-         * Convert through int64_t so INT_MIN-like
-         * values do not overflow as an int.
-         */
         int64_t signed_code =
             (int64_t)exit_code;
 

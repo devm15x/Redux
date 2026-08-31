@@ -7,6 +7,7 @@ override ISO_ROOT := iso_root
 
 TOOLCHAIN :=
 TOOLCHAIN_PREFIX := /c/cross/bin/x86_64-elf-
+CODENAME := BREAKING NEWS! (local gamer just touched grass)
 
 # Local NASM installation
 NASM := /c/Users/DanielFenech/Documents/reduxkernel/src/nasm-3.02/nasm.exe

@@ -1,5 +1,5 @@
-#ifndef REDUX_PROGRAM_H
-#define REDUX_PROGRAM_H
+#ifndef REDUX_PROGRAM3_H
+#define REDUX_PROGRAM3_H
 
 #include "limine.h"
 

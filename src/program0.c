@@ -80,18 +80,8 @@ static const redux_api_t redux_api =
     .print = print,
     .println = println,
     .putchar = terminal_putchar,
-    .print_uint64 = print_uint64,
 
     .clear = api_clear,
-
-    .keyboard_get_scancode =
-        keyboard_get_scancode,
-
-    .scancode_to_ascii =
-        scancode_to_ascii,
-
-    .set_cursor =
-        api_set_cursor
 };
 
 

@@ -20,14 +20,13 @@ jump_usermode:
 
     lea rax, [rel .returned]
     mov [rel usermode_return_rip], rax
-
-    push qword 0x23
+    mov rax, rdi
+    mov rdi, rdx
+    push qword 0x1B     
     push rsi
     push qword 0x202
-    push qword 0x1B
-    push rdi
-
+    push qword 0x23    
+    push rax
     iretq
-
 .returned:
     ret
