@@ -132,6 +132,7 @@ static void api_putchar(
         (uint64_t)(unsigned char)character
     );
 }
+uint64_t register_stub(uint32_t syscall_number);
 
 static const redux_api_t redux_api =
 {
@@ -223,7 +224,7 @@ static int program_setup_user_runtime(void)
         0x05,
         0xC3
     };
-
+    
     static const uint8_t
         println_stub[] =
     {
@@ -284,7 +285,7 @@ static int program_setup_user_runtime(void)
         0x0F,
         0x0B
     };
-
+    
     program_write_bytes(
         USER_API_PRINT,
         print_stub,
@@ -336,19 +337,22 @@ static int program_setup_user_runtime(void)
 
     user_api->print =
         (void (*)(const char *))
-        (uintptr_t)USER_API_PRINT;
+        (uintptr_t)register_stub(3);
 
     user_api->println =
         (void (*)(const char *))
-        (uintptr_t)USER_API_PRINTLN;
+        (uintptr_t)register_stub(1);
 
     user_api->putchar =
         (void (*)(char))
-        (uintptr_t)USER_API_PUTCHAR;
+        (uintptr_t)register_stub(4);
 
     user_api->clear =
         (void (*)(void))
-        (uintptr_t)USER_API_CLEAR;
+        (uintptr_t)register_stub(5);
+    user_api->put_pixel = 
+        (void (*)(uint32_t, uint32_t, uint32_t))
+        (uintptr_t)register_stub(6);
 
     program_user_runtime_ready = 1;
 
@@ -470,6 +474,26 @@ static void debug_print_path(
 
 #endif
 
+uint64_t stub_next_address = USER_API_ADDRESS + 0x100;
+
+uint64_t register_stub(uint32_t syscall_number) {
+         uint8_t
+        generic_stub[] =
+    {
+        0xB8,
+        syscall_number & 0xFF,
+        (syscall_number >> 8) & 0xFF,
+        (syscall_number >> 16) & 0xFF,
+        (syscall_number >> 24) & 0xFF,
+        0x0F,
+        0x05,
+        0xC3
+    };
+    program_write_bytes(stub_next_address, generic_stub, sizeof(generic_stub));
+    uint64_t stub_current_address = stub_next_address;
+    stub_next_address += sizeof(generic_stub);
+    return stub_current_address;
+}
 void program_run3(
     const char *path
 )

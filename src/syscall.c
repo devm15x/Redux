@@ -92,7 +92,7 @@ void syscall_init(void)
     );
 }
 
-uint64_t syscall_dispatch(uint64_t number, uint64_t arg1)
+uint64_t syscall_dispatch(uint64_t number, uint64_t arg1, uint64_t arg2, uint64_t arg3)
 {
     if (number == 1)
     {
@@ -116,6 +116,10 @@ uint64_t syscall_dispatch(uint64_t number, uint64_t arg1)
     }
     if (number == 5) {
         terminal_clear(terminal_get_framebuffer(), 0x00081A33);
+        return 0;
+    }
+    if (number == 6) {
+        terminal_putpixel(arg1, arg2, arg3);
         return 0;
     }
 }

@@ -504,7 +504,9 @@ void terminal_putchar(char c)
  * Printing
  * ============================================================
  */
-
+void terminal_putpixel(uint32_t x, uint32_t y, uint32_t color){
+    put_pixel(x, y, color);
+}
 void print(const char *text)
 {
     if (text == NULL)

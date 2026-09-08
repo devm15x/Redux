@@ -28,9 +28,10 @@ syscall_entry:
     push r8
     push r9
 
+    mov rcx, rdx
+    mov rdx, rsi
     mov rsi, rdi
     mov rdi, rax
-
     call syscall_dispatch
 
     cmp rax, 1

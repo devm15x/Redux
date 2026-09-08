@@ -35,7 +35,7 @@ void terminal_putchar(char c);
 
 void print(const char *text);
 void println(const char *text);
-
+void terminal_putpixel(uint32_t x, uint32_t y, uint32_t color);
 void print_uint64(
     uint64_t value
 );
