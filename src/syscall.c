@@ -77,9 +77,9 @@ void syscall_init(void)
 
     wrmsr(
         IA32_STAR,
+        ((uint64_t)0x10 << 48) |
         ((uint64_t)0x08 << 32)
     );
-
 
     wrmsr(
         IA32_LSTAR,

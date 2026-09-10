@@ -198,7 +198,7 @@ static void shell_execute(void)
     }
     else if (strings_equal(argv[0], "ver"))
     {
-        println("Redux Kernel v0.1.0 Milestone 1");
+        println("Redux Kernel v0.1.0 Milestone 2");
     }
     else if (strings_equal(argv[0], "echo"))
     {

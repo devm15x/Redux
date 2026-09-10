@@ -273,11 +273,11 @@ uint32_t cursor_ticks =
 
     terminal_set_cursor(0, 0);
 
-    println("Redux Kernel v0.1.0 Milestone 1");
+    println("Redux Kernel v0.1.0 Milestone 2");
     terminal_putchar('\n');
 
     println("Copyright (C) 2026-present devm15");
-    println("Licensed under the MIT License.");
+    println("Licensed under the GPL v3.0 License.");
 
     print("Available Memory: ");
     print_uint64(get_usable_ram_kb());
