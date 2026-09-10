@@ -13,7 +13,6 @@ typedef struct
     uint64_t r10;
     uint64_t r9;
     uint64_t r8;
-
     uint64_t rdi;
     uint64_t rsi;
     uint64_t rbp;
@@ -28,13 +27,8 @@ typedef struct
     uint64_t rip;
     uint64_t cs;
     uint64_t rflags;
-
-    /*
-     * These are only pushed automatically by the CPU
-     * when switching privilege levels, such as Ring 3 -> Ring 0.
-     *
-     * Don't blindly read them for a Ring 0 -> Ring 0 exception.
-     */
+    uint64_t rsp;
+    uint64_t ss;
 } interrupt_frame_t;
 
 __attribute__((noreturn))

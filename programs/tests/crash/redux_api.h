@@ -13,10 +13,8 @@ typedef struct
     void (*print)(const char *text);
     void (*println)(const char *text);
     void (*putchar)(char character);
-    void (*clear)(uint32_t color);
+    void (*clear)(void);
     void (*put_pixel)(uint32_t x, uint32_t y, uint32_t color);
-    uint8_t (*get_scancode)(void);
-    uint8_t (*scancode_to_ascii)(uint8_t scancode);
 
 } redux_api_t;
 

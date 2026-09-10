@@ -35,6 +35,63 @@ static int strings_equal(const char *a, const char *b)
     return *a == *b;
 }
 
+static void redux_path_to_fatfs(char *path)
+{
+    for (size_t i = 0; path[i] != '\0'; i++)
+    {
+        if (path[i] == '%')
+            path[i] = '/';
+    }
+}
+
+static void fatfs_path_to_redux(char *path)
+{
+    for (size_t i = 0; path[i] != '\0'; i++)
+    {
+        if (path[i] == '/')
+            path[i] = '%';
+    }
+}
+
+static void normalize_path(const char *input, char *output, size_t output_size)
+{
+    size_t i = 0;
+
+    while (input[i] != '\0' && i < output_size - 1)
+    {
+        output[i] = input[i] == '%' ? '/' : input[i];
+        i++;
+    }
+
+    output[i] = '\0';
+}
+
+static void display_redux_path(const char *path)
+{
+    print("[0]:");
+
+    if (path[0] == '0' && path[1] == ':')
+        path += 2;
+
+    if (*path == '/')
+        path++;
+
+    if (*path == '\0')
+        return;
+
+    print(" ");
+
+    while (*path != '\0')
+    {
+        if (*path == '/')
+            print(" % ");
+        else
+            terminal_putchar(*path);
+
+        path++;
+    }
+}
+
 static int shell_parse_arguments(char *input, char *argv[], int max_args)
 {
     int argc = 0;
@@ -76,8 +133,20 @@ static int shell_parse_arguments(char *input, char *argv[], int max_args)
 
 static void shell_prompt(void)
 {
+    char cwd[256];
+
+    if (f_getcwd(cwd, sizeof(cwd)) == FR_OK)
+    {
+        display_redux_path(cwd);
+    }
+    else
+    {
+        print("[?]:");
+    }
+
     print("> ");
 }
+
 
 static void shell_create_test_file(void)
 {
@@ -123,12 +192,107 @@ static void shell_create_test_file(void)
     println("");
 }
 
+static void shell_mkfolder(const char *path)
+{
+    char normalized[256];
+    normalize_path(path, normalized, sizeof(normalized));
+
+    FRESULT result = f_mkdir(normalized);
+
+    if (result != FR_OK)
+    {
+        print("Could not create folder. FatFs error: ");
+        print_uint64((uint64_t)result);
+        println("");
+    }
+}
+
+static void shell_mkfile(const char *path)
+{
+    char normalized[256];
+    normalize_path(path, normalized, sizeof(normalized));
+
+    FIL file;
+
+    FRESULT result = f_open(
+        &file,
+        normalized,
+        FA_CREATE_NEW | FA_WRITE
+    );
+
+    if (result != FR_OK)
+    {
+        print("Could not create file. FatFs error: ");
+        print_uint64((uint64_t)result);
+        println("");
+        return;
+    }
+
+    f_close(&file);
+}
+static void shell_cd(const char *path)
+{
+    char normalized[256];
+    normalize_path(path, normalized, sizeof(normalized));
+    FRESULT result = f_chdir(normalized);
+
+    if (result != FR_OK)
+    {
+        print("Could not change directory. FatFs error: ");
+        print_uint64((uint64_t)result);
+        println("");
+    }
+}
+static void shell_rm(const char *path)
+{
+    char normalized[256];
+    normalize_path(path, normalized, sizeof(normalized));
+
+    FRESULT result = f_unlink(normalized);
+
+    if (result != FR_OK)
+    {
+        print("Could not remove file or folder. FatFs error: ");
+        print_uint64((uint64_t)result);
+        println("");
+    }
+}
+
 static void shell_dir(const char *path)
 {
     DIR directory;
     FILINFO file_info;
+    FRESULT result;
 
-    FRESULT result = f_opendir(&directory, path);
+    char cwd[256];
+    char normalized[256];
+
+    const char *target;
+
+    if (path == NULL || path[0] == '\0')
+    {
+        result = f_getcwd(cwd, sizeof(cwd));
+
+        if (result != FR_OK)
+        {
+            print("Could not get current directory. FatFs error: ");
+            print_uint64((uint64_t)result);
+            println("");
+            return;
+        }
+
+        target = cwd;
+    }
+    else
+    {
+        normalize_path(path, normalized, sizeof(normalized));
+        target = normalized;
+    }
+
+    print("Directory of ");
+    display_redux_path(target);
+    println("");
+    result = f_opendir(&directory, target);
 
     if (result != FR_OK)
     {
@@ -151,18 +315,12 @@ static void shell_dir(const char *path)
         }
 
         if (file_info.fname[0] == '\0')
-        {
             break;
-        }
 
         if (file_info.fattrib & AM_DIR)
-        {
             print("<DIR> ");
-        }
         else
-        {
             print("      ");
-        }
 
         println(file_info.fname);
     }
@@ -233,7 +391,9 @@ static void shell_execute(void)
         }
         else
         {
-            program_run(argv[1]);
+            char normalized[256];
+            normalize_path(argv[1], normalized, sizeof(normalized));
+            program_run(normalized);
         }
     }
     else if (strings_equal(argv[0], "run"))
@@ -244,7 +404,53 @@ static void shell_execute(void)
         }
         else
         {
-            program_run3(argv[1]);
+            char normalized[256];
+            normalize_path(argv[1], normalized, sizeof(normalized));
+            program_run3(normalized);
+        }
+    }
+    else if (strings_equal(argv[0], "mkfolder"))
+    {
+        if (argc < 2)
+        {
+            println("Usage: mkfolder <folder>");
+        }
+        else
+        {
+            shell_mkfolder(argv[1]);
+        }
+    }
+    else if (strings_equal(argv[0], "mkfile"))
+    {
+        if (argc < 2)
+        {
+            println("Usage: mkfile <file>");
+        }
+        else
+        {
+            shell_mkfile(argv[1]);
+        }
+    }
+    else if (strings_equal(argv[0], "rm"))
+    {
+        if (argc < 2)
+        {
+            println("Usage: rm <file\folder>");
+        }
+        else
+        {
+            shell_rm(argv[1]);
+        }
+    }
+    else if (strings_equal(argv[0], "cd"))
+    {
+        if (argc < 2)
+        {
+            println("Usage: cd <file\folder>");
+        }
+        else
+        {
+            shell_cd(argv[1]);
         }
     }
     else if (strings_equal(argv[0], "dir")){
@@ -255,7 +461,7 @@ static void shell_execute(void)
         
         else
         {
-            shell_dir("0:/");
+           shell_dir(NULL);
         }
     }
     else

@@ -46,18 +46,6 @@ static void api_set_cursor(
     terminal_set_cursor(x, y);
 }
 
-static void api_clear(void)
-{
-    if (g_program_framebuffer == NULL)
-    {
-        return;
-    }
-
-    terminal_clear(
-        g_program_framebuffer,
-        0x00081A33
-    );
-}
 
 void program_initialize(
     struct limine_framebuffer *framebuffer
@@ -81,7 +69,6 @@ static const redux_api_t redux_api =
     .println = println,
     .putchar = terminal_putchar,
 
-    .clear = api_clear,
 };
 
 

@@ -28,11 +28,25 @@ typedef struct
 
 static idtr_t idtr;
 
+extern void exception_return_to_kernel(uint64_t code);
+
 __attribute__((noreturn))
 void exception_handler(
     interrupt_frame_t *frame
 )
 {
+    uint64_t ring = frame->cs & 3;
+
+    if (ring == 3 &&
+        frame->vector != 2 &&
+        frame->vector != 8 &&
+        frame->vector != 18)
+    {
+        exception_return_to_kernel(
+            0x100 + frame->vector
+        );
+    }
+
     panic_exception(frame);
 }
 

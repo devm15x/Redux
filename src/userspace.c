@@ -7,7 +7,7 @@
 #define USER_CODE_ADDRESS 0x0000000040000000ULL
 #define USER_STACK_TOP    0x0000000080000000ULL
 
-extern void jump_usermode(
+extern uint64_t  jump_usermode(
     uint64_t rip,
     uint64_t rsp,
     uint64_t api

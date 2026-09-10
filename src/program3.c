@@ -52,28 +52,6 @@ static uint64_t redux_syscall(
     return result;
 }
 
-static void api_set_cursor(
-    uint32_t x,
-    uint32_t y
-)
-{
-    terminal_set_cursor(x, y);
-}
-
-static void api_clear(void)
-{
-    uint64_t voidedstuff = 0;
-
-    if (g_program_framebuffer == NULL)
-    {
-        return;
-    }
-
-    redux_syscall(
-        5,
-        voidedstuff
-    );
-}
 
 void program_initialize3(
     struct limine_framebuffer *framebuffer
@@ -83,65 +61,9 @@ void program_initialize3(
         framebuffer;
 }
 
-static void api_print(
-    const char *text
-)
-{
-    uint64_t textpointer =
-        (uint64_t)(uintptr_t)text;
 
-    redux_syscall(
-        3,
-        textpointer
-    );
-}
-
-static void api_println(
-    const char *text
-)
-{
-    uint64_t textpointer =
-        (uint64_t)(uintptr_t)text;
-
-    redux_syscall(
-        1,
-        textpointer
-    );
-}
-
-static void api_return(
-    const char *text
-)
-{
-    (void)text;
-
-    uint64_t voidedstuff = 0;
-
-    redux_syscall(
-        2,
-        voidedstuff
-    );
-}
-
-static void api_putchar(
-    char character
-)
-{
-    redux_syscall(
-        4,
-        (uint64_t)(unsigned char)character
-    );
-}
 uint64_t register_stub(uint32_t syscall_number);
 
-static const redux_api_t redux_api =
-{
-    .version = REDUX_API_VERSION,
-    .print = api_print,
-    .println = api_println,
-    .putchar = api_putchar,
-    .clear = api_clear,
-};
 
 static void program_write_bytes(
     uint64_t address,
@@ -212,110 +134,6 @@ static int program_setup_user_runtime(void)
         return 0;
     }
 
-    static const uint8_t
-        print_stub[] =
-    {
-        0xB8,
-        0x03,
-        0x00,
-        0x00,
-        0x00,
-        0x0F,
-        0x05,
-        0xC3
-    };
-    
-    static const uint8_t
-        println_stub[] =
-    {
-        0xB8,
-        0x01,
-        0x00,
-        0x00,
-        0x00,
-        0x0F,
-        0x05,
-        0xC3
-    };
-
-    static const uint8_t
-        putchar_stub[] =
-    {
-        0x40,
-        0x0F,
-        0xB6,
-        0xFF,
-        0xB8,
-        0x04,
-        0x00,
-        0x00,
-        0x00,
-        0x0F,
-        0x05,
-        0xC3
-    };
-
-    static const uint8_t
-        clear_stub[] =
-    {
-        0x31,
-        0xFF,
-        0xB8,
-        0x05,
-        0x00,
-        0x00,
-        0x00,
-        0x0F,
-        0x05,
-        0xC3
-    };
-
-    static const uint8_t
-        exit_stub[] =
-    {
-        0x89,
-        0xC7,
-        0xB8,
-        0x02,
-        0x00,
-        0x00,
-        0x00,
-        0x0F,
-        0x05,
-        0x0F,
-        0x0B
-    };
-    
-    program_write_bytes(
-        USER_API_PRINT,
-        print_stub,
-        sizeof(print_stub)
-    );
-
-    program_write_bytes(
-        USER_API_PRINTLN,
-        println_stub,
-        sizeof(println_stub)
-    );
-
-    program_write_bytes(
-        USER_API_PUTCHAR,
-        putchar_stub,
-        sizeof(putchar_stub)
-    );
-
-    program_write_bytes(
-        USER_API_CLEAR,
-        clear_stub,
-        sizeof(clear_stub)
-    );
-
-    program_write_bytes(
-        USER_API_EXIT,
-        exit_stub,
-        sizeof(exit_stub)
-    );
-
     redux_api_t *user_api =
         (redux_api_t *)(uintptr_t)
         USER_API_ADDRESS;
@@ -348,11 +166,17 @@ static int program_setup_user_runtime(void)
         (uintptr_t)register_stub(4);
 
     user_api->clear =
-        (void (*)(void))
+        (void (*)(uint32_t color))
         (uintptr_t)register_stub(5);
     user_api->put_pixel = 
         (void (*)(uint32_t, uint32_t, uint32_t))
         (uintptr_t)register_stub(6);
+    user_api->get_scancode = 
+        (uint8_t (*)(void))
+        (uintptr_t)register_stub(7);
+    user_api->scancode_to_ascii = 
+        (uint8_t (*)(uint8_t))
+        (uintptr_t)register_stub(8);
 
     program_user_runtime_ready = 1;
 
@@ -602,30 +426,6 @@ void program_run3(
         return;
     }
 
-    if (file_size >
-        PROGRAM_FILE_BUFFER_SIZE)
-    {
-        PROGRAM_DEBUG_MESSAGE(
-            "Program file exceeds "
-            "buffer size."
-        );
-
-        println(
-            "Program file is larger "
-            "than 1 MiB."
-        );
-
-        result =
-            f_close(&file);
-
-        PROGRAM_DEBUG_UINT(
-            "f_close result",
-            result
-        );
-
-        return;
-    }
-
     PROGRAM_DEBUG_HEX(
         "Program file buffer",
         program_file_buffer
@@ -843,12 +643,13 @@ void program_run3(
         user_rsp =
             USER_API_EXIT;
 
-    jump_usermode(
+    exit_code = (int)jump_usermode(
         (uint64_t)(uintptr_t)
-            load_info.entry,
+        load_info.entry,
         user_rsp,
         USER_API_ADDRESS
     );
+    
 
     PROGRAM_DEBUG_MESSAGE(
         "ELF entry returned successfully."

@@ -1,6 +1,7 @@
 #include "syscall.h"
+#include "ascii.h"
 #include "terminal.h"
-
+#include "drivers/keyboard.h"
 #include <stdint.h>
 
 #define IA32_EFER   0xC0000080
@@ -115,11 +116,17 @@ uint64_t syscall_dispatch(uint64_t number, uint64_t arg1, uint64_t arg2, uint64_
         return 0;
     }
     if (number == 5) {
-        terminal_clear(terminal_get_framebuffer(), 0x00081A33);
+        terminal_clear(terminal_get_framebuffer(), arg1);
         return 0;
     }
     if (number == 6) {
         terminal_putpixel(arg1, arg2, arg3);
         return 0;
+    }
+    if (number == 7) {
+        return keyboard_get_scancode();
+    }
+    if (number == 8) {
+        return scancode_to_ascii(arg1);
     }
 }
