@@ -20,11 +20,6 @@
 #define USER_STACK_BOTTOM (USER_STACK_TOP - USER_STACK_SIZE)
 
 #define USER_API_ADDRESS 0x0000000070000000ULL
-#define USER_API_PRINT (USER_API_ADDRESS + 0x100)
-#define USER_API_PRINTLN (USER_API_ADDRESS + 0x120)
-#define USER_API_PUTCHAR (USER_API_ADDRESS + 0x140)
-#define USER_API_CLEAR (USER_API_ADDRESS + 0x160)
-#define USER_API_EXIT (USER_API_ADDRESS + 0x180)
 
 static uint8_t program_file_buffer[
     PROGRAM_FILE_BUFFER_SIZE
@@ -34,24 +29,7 @@ static struct limine_framebuffer *
     g_program_framebuffer = NULL;
 
 static int program_user_runtime_ready = 0;
-
-static uint64_t redux_syscall(
-    uint64_t number,
-    uint64_t arg1
-)
-{
-    uint64_t result = number;
-
-    __asm__ volatile(
-        "syscall"
-        : "+a"(result)
-        : "D"(arg1)
-        : "rcx", "r11", "memory"
-    );
-
-    return result;
-}
-
+static uint64_t user_exit_stub = 0;
 
 void program_initialize3(
     struct limine_framebuffer *framebuffer
@@ -61,9 +39,8 @@ void program_initialize3(
         framebuffer;
 }
 
-
 uint64_t register_stub(uint32_t syscall_number);
-
+uint64_t register_exit_stub(void);
 
 static void program_write_bytes(
     uint64_t address,
@@ -166,17 +143,23 @@ static int program_setup_user_runtime(void)
         (uintptr_t)register_stub(4);
 
     user_api->clear =
-        (void (*)(uint32_t color))
+        (void (*)(uint32_t))
         (uintptr_t)register_stub(5);
-    user_api->put_pixel = 
+
+    user_api->put_pixel =
         (void (*)(uint32_t, uint32_t, uint32_t))
         (uintptr_t)register_stub(6);
-    user_api->get_scancode = 
+
+    user_api->get_scancode =
         (uint8_t (*)(void))
         (uintptr_t)register_stub(7);
-    user_api->scancode_to_ascii = 
+
+    user_api->scancode_to_ascii =
         (uint8_t (*)(uint8_t))
         (uintptr_t)register_stub(8);
+
+    user_exit_stub =
+        register_exit_stub();
 
     program_user_runtime_ready = 1;
 
@@ -298,11 +281,14 @@ static void debug_print_path(
 
 #endif
 
-uint64_t stub_next_address = USER_API_ADDRESS + 0x100;
+uint64_t stub_next_address =
+    USER_API_ADDRESS + 0x100;
 
-uint64_t register_stub(uint32_t syscall_number) {
-         uint8_t
-        generic_stub[] =
+uint64_t register_stub(
+    uint32_t syscall_number
+)
+{
+    uint8_t generic_stub[] =
     {
         0xB8,
         syscall_number & 0xFF,
@@ -313,11 +299,47 @@ uint64_t register_stub(uint32_t syscall_number) {
         0x05,
         0xC3
     };
-    program_write_bytes(stub_next_address, generic_stub, sizeof(generic_stub));
-    uint64_t stub_current_address = stub_next_address;
-    stub_next_address += sizeof(generic_stub);
+
+    program_write_bytes(
+        stub_next_address,
+        generic_stub,
+        sizeof(generic_stub)
+    );
+
+    uint64_t stub_current_address =
+        stub_next_address;
+
+    stub_next_address +=
+        sizeof(generic_stub);
+
     return stub_current_address;
 }
+
+uint64_t register_exit_stub(void)
+{
+    static const uint8_t exit_stub[] =
+    {
+        0x89, 0xC7,
+        0xB8, 0x02, 0x00, 0x00, 0x00,
+        0x0F, 0x05,
+        0x0F, 0x0B
+    };
+
+    uint64_t address =
+        stub_next_address;
+
+    program_write_bytes(
+        address,
+        exit_stub,
+        sizeof(exit_stub)
+    );
+
+    stub_next_address +=
+        sizeof(exit_stub);
+
+    return address;
+}
+
 void program_run3(
     const char *path
 )
@@ -422,6 +444,18 @@ void program_run3(
             "f_close result",
             result
         );
+
+        return;
+    }
+
+    if (file_size >
+        PROGRAM_FILE_BUFFER_SIZE)
+    {
+        println(
+            "Program file is too large."
+        );
+
+        f_close(&file);
 
         return;
     }
@@ -641,7 +675,7 @@ void program_run3(
 
     *(uint64_t *)(uintptr_t)
         user_rsp =
-            USER_API_EXIT;
+            user_exit_stub;
 
     exit_code = (int)jump_usermode(
         (uint64_t)(uintptr_t)
@@ -649,7 +683,6 @@ void program_run3(
         user_rsp,
         USER_API_ADDRESS
     );
-    
 
     PROGRAM_DEBUG_MESSAGE(
         "ELF entry returned successfully."

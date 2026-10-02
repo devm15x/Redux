@@ -16,6 +16,8 @@
 static uint8_t syscall_stack[SYSCALL_STACK_SIZE]
     __attribute__((aligned(16)));
 
+    uint64_t syscall_exit_code = 0;
+
 
 uint64_t syscall_kernel_stack_top = 0;
 
@@ -103,6 +105,7 @@ uint64_t syscall_dispatch(uint64_t number, uint64_t arg1, uint64_t arg2, uint64_
 
     if (number == 2)
     {
+        syscall_exit_code = arg1;
         return 1;
     }
     if (number == 3)

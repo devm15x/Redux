@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define REDUX_API_VERSION 2
+#define REDUX_API_VERSION 3
 
 typedef struct
 {
@@ -13,7 +13,10 @@ typedef struct
     void (*print)(const char *text);
     void (*println)(const char *text);
     void (*putchar)(char character);
-    void (*clear)(void);
+    void (*clear)(uint32_t color);
+    void (*put_pixel)(uint32_t x, uint32_t y, uint32_t color);
+    uint8_t (*get_scancode)(void);
+    uint8_t (*scancode_to_ascii)(uint8_t scancode);
 
 } redux_api_t;
 

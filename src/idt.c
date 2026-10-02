@@ -41,7 +41,8 @@ void exception_handler(
         frame->vector != 2 &&
         frame->vector != 8 &&
         frame->vector != 18)
-    {
+    {   
+        
         exception_return_to_kernel(
             0x100 + frame->vector
         );

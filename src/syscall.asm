@@ -6,6 +6,7 @@ extern syscall_kernel_stack_top
 extern syscall_dispatch
 extern usermode_return_rsp
 extern usermode_return_rip
+extern syscall_exit_code
 
 section .bss
 align 8
@@ -52,6 +53,7 @@ syscall_entry:
     o64 sysret
 
 .exit:
+    mov rax, [rel syscall_exit_code]
     mov rsp, [rel usermode_return_rsp]
     sti
     jmp [rel usermode_return_rip]

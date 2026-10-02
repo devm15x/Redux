@@ -4,7 +4,7 @@ OBJDUMP = x86_64-elf-objdump
 READELF = x86_64-elf-readelf
 
 # Target binary name
-TARGET = GAME.ELF
+TARGET = TEST.ELF
 
 # Linker script
 LINKER_SCRIPT = linker.ld
