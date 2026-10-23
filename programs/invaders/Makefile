@@ -4,7 +4,7 @@ OBJDUMP = x86_64-elf-objdump
 READELF = x86_64-elf-readelf
 
 # Target binary name
-TARGET = TEST.ELF
+TARGET = INVADERS.ELF
 
 # Linker script
 LINKER_SCRIPT = linker.ld
@@ -18,6 +18,9 @@ CFLAGS = -O2 \
          -fno-builtin \
          -fno-stack-protector \
          -mno-red-zone \
+         -mno-sse \
+         -mno-sse2 \
+         -mno-mmx \
          -fno-asynchronous-unwind-tables \
          -fPIE \
          -Wall \
