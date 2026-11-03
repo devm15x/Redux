@@ -88,6 +88,13 @@ you have found the correct repository.
 
 probably.
 
+Also for compiling, you need to override them using commands. so like for example
+
+```command line
+make TOOLCHAIN_PREFIX=<toolchain-path> \
+     NASM='<nasm-path>'
+```
+
 ## 🚧 Current status
 
 **ALPHA**
@@ -108,25 +115,25 @@ YES IT RUNS PROGRAMS.
 
 Here's what currently exists:
 
-| Feature | Status |
-|---|---|
-| x86_64 Long Mode | WORKS :D |
-| GDT | exists |
-| IDT | also exists |
-| Interrupts | THE CPU HAS BEEN INTERRUPTED |
-| Paging | memory go brrrr |
-| Ring 3 | WAZAHHH IT WORKS |
-| ELF64 loading | YES |
-| SYSCALL | IT ACTUALLY WORKS |
-| Shell | type stuff here |
-| Framebuffer | PIXELS |
-| APIC | interrupts but fancier |
-| exFAT through FatFS | files :D |
-| Limine | boots the thing |
-| USB keyboard | nope |
-| PS/2 keyboard | YES |
-| Multitasking | not yet |
-| Stability | lol |
+| Feature             | Status                       |
+| ------------------- | ---------------------------- |
+| x86_64 Long Mode    | WORKS :D                     |
+| GDT                 | exists                       |
+| IDT                 | also exists                  |
+| Interrupts          | THE CPU HAS BEEN INTERRUPTED |
+| Paging              | memory go brrrr              |
+| Ring 3              | WAZAHHH IT WORKS             |
+| ELF64 loading       | YES                          |
+| SYSCALL             | IT ACTUALLY WORKS            |
+| Shell               | type stuff here              |
+| Framebuffer         | PIXELS                       |
+| APIC                | interrupts but fancier       |
+| exFAT through FatFS | files :D                     |
+| Limine              | boots the thing              |
+| USB keyboard        | nope                         |
+| PS/2 keyboard       | YES                          |
+| Multitasking        | not yet                      |
+| Stability           | lol                          |
 
 also btw
 
